@@ -1,0 +1,37 @@
+- name: perform yum update and reboot server
+  hosts: centos
+  become: true
+  vars:
+  tasks:
+
+        - debug:
+            msg: "Performing Yum update of server {{ ansible_hostname }} "    
+
+        - name: Perform yum update of all packages
+          yum:
+            name: 'sudo'
+            state: latest
+#            exclude: kernel*,foo*
+          async: 1000
+          poll: 0
+          register: yum_sleeper
+
+        - name: Check on async task of yum update
+          async_status:
+            jid: "{{ yum_sleeper.ansible_job_id }}"
+          register: job_result
+          until: job_result.finished
+          retries: 5000    
+
+        - debug:
+            msg: "Yum update of server {{ ansible_hostname }} has been completed."
+
+        - name: Reboot server
+          reboot:
+            msg: Server is being rebooted
+          ignore_errors: yes
+          register: result
+
+        - debug:
+            msg: "Server {{ ansible_hostname }} was rebooted {{ result }}"
+          when: result is defined
